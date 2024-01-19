@@ -33,8 +33,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef OSQP
 #include <osqp.h>
-
+#endif
 
 namespace corbo {
 
