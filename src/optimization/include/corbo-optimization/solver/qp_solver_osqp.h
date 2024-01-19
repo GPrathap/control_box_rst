@@ -28,10 +28,13 @@
 #include <corbo-optimization/solver/qp_solver_interface.h>
 
 #include <memory>
+#include "osqp.h"
+#include "osqp_api_types.h"
+#include <stdlib.h>
+#include <stdio.h>
 
-#ifdef OSQP
 #include <osqp.h>
-#endif
+
 
 namespace corbo {
 
@@ -106,12 +109,16 @@ class SolverOsqp : public QpSolverInterface
 #endif
 
  protected:
-    SolverStatus convertOsqpExitFlagToSolverStatus(c_int status) const;
+    SolverStatus convertOsqpExitFlagToSolverStatus(OSQPInt status) const;
 
  private:
-    std::unique_ptr<OSQPSettings> _settings;
+    // std::unique_ptr<OSQPSettings> _settings;
     // std::unique_ptr<OSQPData> _data;
-    OSQPWorkspace* _work = nullptr;
+    OSQPSolver* _work = nullptr;
+    OSQPWorkspace* workspace;
+    std::unique_ptr<OSQPSettings> _settings;
+    int n_val;
+    int m_val;
 
     Eigen::VectorXd _zero;
 

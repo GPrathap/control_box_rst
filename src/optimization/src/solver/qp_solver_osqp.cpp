@@ -82,29 +82,40 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
     if (!P.isCompressed()) P.makeCompressed();
     if (!A.isCompressed()) A.makeCompressed();
 
-    csc* P_csc = csc_matrix(P.rows(), P.cols(), P.nonZeros(), P.valuePtr(), P.innerIndexPtr(), P.outerIndexPtr());
-    csc* A_csc = csc_matrix(A.rows(), A.cols(), A.nonZeros(), A.valuePtr(), A.innerIndexPtr(), A.outerIndexPtr());
+    // csc* P_csc = csc_matrix(P.rows(), P.cols(), P.nonZeros(), P.valuePtr(), P.innerIndexPtr(), P.outerIndexPtr());
+    // csc* A_csc = csc_matrix(A.rows(), A.cols(), A.nonZeros(), A.valuePtr(), A.innerIndexPtr(), A.outerIndexPtr());
+    
+
+    OSQPCscMatrix* P_csc = (OSQPCscMatrix*)malloc(sizeof(OSQPCscMatrix));
+    OSQPCscMatrix* A_csc = (OSQPCscMatrix*)malloc(sizeof(OSQPCscMatrix));
+
+    csc_set_data(P_csc, P.rows(), P.cols(), P.nonZeros(), P.valuePtr(), P.innerIndexPtr(), P.outerIndexPtr());
+    csc_set_data(A_csc, A.rows(), A.cols(), A.nonZeros(), A.valuePtr(), A.innerIndexPtr(), A.outerIndexPtr());
 
     // Populate data
-    std::unique_ptr<OSQPData> data;
-    if (new_structure || _force_new_structure || !_settings->warm_start || !_work)
+    // std::unique_ptr<OSQPData> data;
+    if (new_structure || _force_new_structure || !_settings->warm_starting || !_work)
     {
         // cleanup previous structure
         if (_work) osqp_cleanup(_work);
 
         // TODO(roesmann): whenever I move  "_data    = std::unique_ptr<OSQPData>(new OSQPData);" to initialize()
         // I get a segfault / issue in the assembler code of OSQP....
-        data    = std::unique_ptr<OSQPData>(new OSQPData);
-        data->n = P.rows();
-        data->m = A.rows();
-        data->P = P_csc;
-        data->q = q.data();
-        data->A = A_csc;
-        data->l = lbA.data();
-        data->u = ubA.data();
+        // data    = std::unique_ptr<OSQPData>(new OSQPData);
+        // data->n = P.rows();
+        // data->m = A.rows();
+        n_val = P.rows();
+        m_val = A.rows();
+        // data->P = P_csc;
+        // data->q = q.data();
+        // data->A = A_csc;
+        // data->l = lbA.data();
+        // data->u = ubA.data();
 
         // Setup workspace
-        c_int exitflag = osqp_setup(&_work, data.get(), _settings.get());  // allocates memory!
+        // OSQPInt exitflag = osqp_setup(&_work, data.get(), _settings.get());  // allocates memory!
+        OSQPInt exitflag = osqp_setup(&_work, P_csc, q.data(), A_csc, lbA.data()
+                            , ubA.data(), A.rows(), P.rows(), _settings.get());
 
         if (!_work || exitflag != 0)
         {
@@ -121,18 +132,24 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
             PRINT_ERROR_NAMED("No previous workspace found. Cannot solve...");
             return SolverStatus::Error;
         }
+        // workspace     = _work->work;
 
         if (zero_x_warmstart)
         {
-            if (_zero.size() != _work->data->n) _zero.setZero(_work->data->n);
+            // if (_zero.size() != _work->work->data->n) _zero.setZero(_work->work->data->n);
+            if (_zero.size() != P.rows()) _zero.setZero(P.rows());
             updatePrimalSolutionWarmStart(_zero);
         }
 
-        int dim_constr = _work->data->m;
+        // int dim_constr = _work->data->m;
+        int dim_constr = A.rows();
 
         if (update_P && update_A && dim_constr > 0)
         {
-            if (osqp_update_P_A(_work, P.valuePtr(), OSQP_NULL, P.nonZeros(), A.valuePtr(), OSQP_NULL, A.nonZeros()) != 0)
+
+            OSQPInt exitflag = osqp_update_data_mat(_work, P.valuePtr(), OSQP_NULL, P.nonZeros(), A.valuePtr(), OSQP_NULL, A.nonZeros());
+            // if (osqp_update_P_A(_work, P.valuePtr(), OSQP_NULL, P.nonZeros(), A.valuePtr(), OSQP_NULL, A.nonZeros()) != 0)
+            if ( exitflag > 0)
             {
                 PRINT_ERROR("SolverOSQP: Cannot update P and A due to dimensions mismatch. Maybe a new sparsity pattern?");
                 return SolverStatus::Error;
@@ -140,7 +157,11 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
         }
         else if (update_P)  // P must be upper triangular!
         {
-            if (osqp_update_P(_work, P.valuePtr(), OSQP_NULL, P.nonZeros()) != 0)
+
+            OSQPInt exitflag = osqp_update_data_mat(_work, P.valuePtr(), OSQP_NULL, P.nonZeros(), NULL, NULL, 0);
+
+            if (exitflag > 0)
+            // if (osqp_update_P(_work, P.valuePtr(), OSQP_NULL, P.nonZeros()) != 0)
             {
                 PRINT_ERROR("SolverOSQP: Cannot update P due to dimensions mismatch. Maybe a new sparsity pattern?");
                 return SolverStatus::Error;
@@ -148,7 +169,9 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
         }
         else if (update_A && dim_constr > 0)
         {
-            if (osqp_update_A(_work, A.valuePtr(), OSQP_NULL, A.nonZeros()) != 0)
+            OSQPInt exitflag = osqp_update_data_mat(_work, NULL, NULL, 0, A.valuePtr(), OSQP_NULL, A.nonZeros());
+            if (exitflag > 0)
+            // if (osqp_update_A(_work, A.valuePtr(), OSQP_NULL, A.nonZeros()) != 0)
             {
                 PRINT_ERROR_NAMED("SolverOSQP: Cannot update A due to dimensions mismatch. Maybe a new sparsity pattern?");
                 return SolverStatus::Error;
@@ -157,7 +180,9 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
 
         if (update_q)
         {
-            if (osqp_update_lin_cost(_work, q.data()) != 0)
+            // if (osqp_update_lin_cost(_work, q.data()) != 0)
+            OSQPInt retval = osqp_update_data_vec(_work, q.data(), NULL, NULL);
+            if (retval > 0)
             {
                 PRINT_ERROR_NAMED("Cannot update q due to dimensions mismatch.");
                 return SolverStatus::Error;
@@ -166,7 +191,9 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
 
         if (update_bounds && dim_constr > 0)
         {
-            if (osqp_update_bounds(_work, lbA.data(), ubA.data()) != 0)
+            OSQPInt retval = osqp_update_data_vec(_work, NULL, lbA.data(), ubA.data());
+            if (retval > 0)
+            // if (osqp_update_bounds(_work, lbA.data(), ubA.data()) != 0)
             {
                 PRINT_ERROR_NAMED("Cannot update lbA abd ubA due to dimensions mismatch.");
                 return SolverStatus::Error;
@@ -175,7 +202,7 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
     }
 
     // Solve Problem
-    // c_int exit_flag =
+    // OSQPInt exit_flag =
     osqp_solve(_work);
 
     // WARNING the lagrange multipliers in OSQP are defiend for L = f(x) + lambda * c(x)
@@ -187,11 +214,11 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
     //    {
     //    }
 
-    if (data)
-    {
-        if (data->P) c_free(data->P);
-        if (data->A) c_free(data->A);
-    }
+    // if (data)
+    // {
+    //     if (data->P) c_free(data->P);
+    //     if (data->A) c_free(data->A);
+    // }
 
     // TODO(roesmann): osqp supports warm-starting and update of just the P matrix (hessian), so we should later go for that
 
@@ -203,13 +230,13 @@ SolverStatus SolverOsqp::solve(SparseMatrix& P, Eigen::Ref<Eigen::VectorXd> q, S
 Eigen::Ref<Eigen::VectorXd> SolverOsqp::getPrimalSolution()
 {
     assert(_work);
-    return Eigen::Map<Eigen::VectorXd>(_work->solution->x, _work->data->n);
+    return Eigen::Map<Eigen::VectorXd>(_work->solution->x, n_val);
 }
 
 Eigen::Ref<Eigen::VectorXd> SolverOsqp::getDualSolution()
 {
     assert(_work);
-    return Eigen::Map<Eigen::VectorXd>(_work->solution->y, _work->data->m);
+    return Eigen::Map<Eigen::VectorXd>(_work->solution->y, m_val);
 }
 
 void SolverOsqp::updatePrimalSolutionWarmStart(const Eigen::Ref<const Eigen::VectorXd>& x)
@@ -219,8 +246,12 @@ void SolverOsqp::updatePrimalSolutionWarmStart(const Eigen::Ref<const Eigen::Vec
         PRINT_ERROR_NAMED("No previous workspace found. Cannot update primal solution...");
         return;
     }
-    if (x.size() == _work->data->n)
-        osqp_warm_start_x(_work, x.data());
+    // if (x.size() == _work->work->data->n)
+     // osqp_warm_start_x(_work, x.data());
+    if (x.size() == n_val){
+        osqp_warm_start(_work, x.data(), OSQP_NULL);
+        // osqp_warm_start_y(_work, y.data());
+    }
     else
         PRINT_ERROR_NAMED("Dimensions mismatch");
 }
@@ -231,15 +262,20 @@ void SolverOsqp::updateDualSolutionWarmStart(const Eigen::Ref<const Eigen::Vecto
         PRINT_ERROR_NAMED("No previous workspace found. Cannot update dual solution...");
         return;
     }
-    if (y.size() == _work->data->m)
+    // if (y.size() == _work->data->m)
+    if (y.size() == m_val)
     {
-        if (y.size() > 0) osqp_warm_start_y(_work, y.data());
+        // if (y.size() > 0) osqp_warm_start_y(_work, y.data());
+        if (y.size() > 0) {
+            osqp_warm_start(_work, OSQP_NULL, y.data());
+            // osqp_warm_start_y(_work, y.data());
+        }   
     }
     else
         PRINT_ERROR_NAMED("Dimensions mismatch");
 }
 
-SolverStatus SolverOsqp::convertOsqpExitFlagToSolverStatus(c_int status) const
+SolverStatus SolverOsqp::convertOsqpExitFlagToSolverStatus(OSQPInt status) const
 {
     switch (status)
     {

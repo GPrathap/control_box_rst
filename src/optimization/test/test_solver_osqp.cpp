@@ -69,14 +69,14 @@ class TestSolverOsqp : public testing::Test
 };
 TEST_F(TestSolverOsqp, osqp_demo)
 {
-    using VectorXl = Eigen::Matrix<c_int, Eigen::Dynamic, 1>;
+    using VectorXl = Eigen::Matrix<OSQPInt, Eigen::Dynamic, 1>;
 
     // Load problem data (sparse format)
     // 0.5*x^T * P * x + q*x  s.t. l <= A <= u  with P: n x n and A: n x m
-    c_int n = 2;
-    c_int m = 3;
+    OSQPInt n = 2;
+    OSQPInt m = 3;
 
-    c_int P_nnz = 3;
+    OSQPInt P_nnz = 3;
     Eigen::Vector3d P_x;  // value vector
     P_x << 4, 1, 2;
     VectorXl P_i(3);  // row indices
@@ -87,7 +87,7 @@ TEST_F(TestSolverOsqp, osqp_demo)
 
     Eigen::Vector2d q(1, 1);
 
-    c_int A_nnz = 4;
+    OSQPInt A_nnz = 4;
     Eigen::Vector4d A_x;
     A_x << 1, 1, 1, 1;
     VectorXl A_i(4);
@@ -119,7 +119,7 @@ TEST_F(TestSolverOsqp, osqp_demo)
 
     // Setup workspace
     OSQPWorkspace* work;
-    c_int exitflag = osqp_setup(&work, data.get(), settings.get());
+    OSQPInt exitflag = osqp_setup(&work, data.get(), settings.get());
     EXPECT_EQ(exitflag, 0);
 
     // Solve Problem
@@ -139,13 +139,13 @@ TEST_F(TestSolverOsqp, osqp_demo)
 
 TEST_F(TestSolverOsqp, osqp_demo_eigen_sparse_interface)
 {
-    using VectorXl = Eigen::Matrix<c_int, Eigen::Dynamic, 1>;
+    using VectorXl = Eigen::Matrix<OSQPInt, Eigen::Dynamic, 1>;
 
     // Load problem data (sparse format)
     // 0.5*x^T * P * x + q*x  s.t. l <= A <= u  with P: n x n and A: n x m
 
-    c_int n = 2;
-    c_int m = 3;
+    OSQPInt n = 2;
+    OSQPInt m = 3;
 
     Eigen::MatrixXd P(n, n);
     P << 4, 1, 1, 2;
@@ -161,12 +161,12 @@ TEST_F(TestSolverOsqp, osqp_demo_eigen_sparse_interface)
     Eigen::VectorXd u(m);
     u << 1, 0.7, 0.7;
 
-    Eigen::SparseMatrix<double, Eigen::ColMajor, c_int> P_sp;
+    Eigen::SparseMatrix<double, Eigen::ColMajor, OSQPInt> P_sp;
     P_sp = P.sparseView();
     P_sp = P_sp.triangularView<Eigen::Upper>();
     P_sp.makeCompressed();
 
-    Eigen::SparseMatrix<double, Eigen::ColMajor, c_int> A_sp;
+    Eigen::SparseMatrix<double, Eigen::ColMajor, OSQPInt> A_sp;
     A_sp = A.sparseView();
     A_sp.makeCompressed();
 
@@ -229,7 +229,7 @@ TEST_F(TestSolverOsqp, osqp_demo_eigen_sparse_interface)
 
     // Setup workspace
     OSQPWorkspace* work;
-    c_int exitflag = osqp_setup(&work, data.get(), settings.get());
+    OSQPInt exitflag = osqp_setup(&work, data.get(), settings.get());
     EXPECT_EQ(exitflag, 0);
 
     // Solve Problem

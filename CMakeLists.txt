@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(control_box_rst)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(MESSAGE_SUPPORT OFF CACHE BOOL "Message support (downloads and compiles Protobuf)" FORCE)
 set(RPC_SUPPORT OFF CACHE BOOL "Network communication (downloads and comiles gRPC, requires MESSAGE_SUPPORT" FORCE)
 set(YAML_SUPPORT OFF CACHE BOOL "Yaml support" FORCE)
