@@ -85,6 +85,7 @@ class ReferenceTrajectoryInterface
 
     virtual bool isCached(double dt, int n, Time t) const              = 0;
     virtual bool isCached(const std::vector<double>& dt, Time t) const = 0;
+    virtual void getRefTraj(std::vector<OutputVector>) = 0;
 
 #ifdef MESSAGE_SUPPORT
     //! Export reference trajectory to message
@@ -136,6 +137,9 @@ class StaticReference : public ReferenceTrajectoryInterface
 
     bool isCached(double /*dt*/, int /*n*/, Time /*t*/) const override { return true; }
     bool isCached(const std::vector<double>& /*dt*/, Time /*t*/) const override { return true; }
+    void getRefTraj(std::vector<OutputVector>){
+
+    }
 
 // import / export support
 #ifdef MESSAGE_SUPPORT
@@ -228,6 +232,10 @@ class SineReferenceTrajectory : public ReferenceTrajectoryInterface
         return true;
     }
 
+    void getRefTraj(std::vector<OutputVector>){
+        
+    }
+
     void precompute(double dt, int n, Time t) override
     {
         _cached_trajectory.resize(n);
@@ -290,12 +298,12 @@ class SineReferenceTrajectory : public ReferenceTrajectoryInterface
         _omega     = omega;
         _offset    = offset;
     }
+    std::vector<OutputVector> _cached_trajectory;
 
  private:
     double _amplitude = 1;
     double _omega     = 1;
     double _offset    = 0;
-    std::vector<OutputVector> _cached_trajectory;
     std::vector<double> _cached_dt;
     Time _cached_t;
     OutputVector _zero_vector = Eigen::VectorXd::Zero(1);
@@ -356,8 +364,14 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
         return true;
     }
 
+    void getRefTraj(std::vector<OutputVector> ref_traj){
+        ref_traj = _cached_trajectory;
+    }
+
     void precompute(double dt, int n, Time t) override
     {
+
+        std::cout<< "precompute " << dt << " n " << n << " time " << t << std::endl;
         _cached_trajectory.resize(n);
 
         Duration d;
@@ -366,6 +380,7 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
         {
             d.fromSec(dt * double(i));
             getReference(t + d, _cached_trajectory[i]);
+            // std::cout<< "getReference t + d " << t + d << " " << _cached_trajectory[i].transpose() << std::endl;
         }
         _cached_dt.resize(1);
         _cached_dt[0] = dt;
@@ -397,27 +412,34 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
         }
 
         double time = t.toSec() - _trajectory->getTimeFromStart();
-
+        // std::cout<<  " t.toSec()" <<  t.toSec() << "   _trajectory->getTimeFromStart()  "  
+        //         <<  _trajectory->getTimeFromStart() << "   _trajectory->getFinalTime() " <<  _trajectory->getFinalTime() << std::endl;
         ref.resize(_trajectory->getValueDimension());
 
         if (time <= 0 || _trajectory->getTimeDimension() ==
                              1)  // TODO(roesmann): should we really check for time <= 0? do we also need to take time_from_start into account?
             ref = _trajectory->getValuesMap(0);
-        else if (time >= _trajectory->getFinalTime())
-            ref = _trajectory->getValuesMap(_trajectory->getTimeDimension() - 1);
-        else
-            _trajectory->getValuesInterpolate(time, ref, _interpolation, TimeSeries::Extrapolation::ZeroOrderHold);
+        else if (time >= _trajectory->getFinalTime()){
+             ref = _trajectory->getValuesMap(_trajectory->getTimeDimension() - 1);
+            //  std::cout<<  " ref final " <<  ref.transpose() << std::endl;
+        } else {
+            // std::cout<<  " ref inter " <<  ref.transpose() << "  time " << time << std::endl;
+               _trajectory->getValuesInterpolate(time, ref, _interpolation, TimeSeries::Extrapolation::ZeroOrderHold);
+        }
+         
     }
 
     const OutputVector& getReferenceCached(int k) const override
     {
+        // std::cout<<  ">>>>>>getReferenceCached : ===============" <<  k << std::endl;
         if (k >= _cached_trajectory.size())
         {
             PRINT_ERROR(
                 "DiscreteTimeReferenceTrajectory::getReferenceCached: k is not a valid index for cached reference. Returning next steady state");
+            std::cout<<  "send _next_steady_state " <<  _next_steady_state.transpose() << std::endl;
             return _next_steady_state;
         }
-
+        // std::cout<<  ">>>>>>getReferenceCached : ===============" << _cached_trajectory.size() << std::endl;
         return _cached_trajectory[k];
     }
 
@@ -437,7 +459,9 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
             return;
         }
 
+        std::cout<< "==============================setTrajectory==============================================" << std::endl;
         _trajectory        = trajectory;
+        std::cout<< "_trajectory  " << trajectory->getTimeFromStart()  << std::endl;
         _next_steady_state = trajectory->getValuesMap(trajectory->getTimeDimension() - 1);
 
         // Initialize the cached trajectory with the FIRST trajectory point
@@ -453,6 +477,7 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
     void setInterpolationMethod(TimeSeries::Interpolation interpolation) { _interpolation = interpolation; }
 
     const TimeSeries::Ptr& getReferenceTrajectory() { return _trajectory; }
+    std::vector<OutputVector> _cached_trajectory;
 
 #ifdef MESSAGE_SUPPORT
     // import / export support
@@ -462,7 +487,6 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
 
  private:
     TimeSeries::Ptr _trajectory;
-    std::vector<OutputVector> _cached_trajectory;
     std::vector<double> _cached_dt;
     Time _cached_t;
     OutputVector _next_steady_state;
@@ -506,6 +530,10 @@ class BlindDiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
     {
         if (_output_cache.size() != getDimension() || t != _cached_t) return false;
         return true;
+    }
+
+    void getRefTraj(std::vector<OutputVector> ref_traj){
+       
     }
 
     bool isCached(const std::vector<double>& dt, Time t) const override
@@ -572,6 +600,8 @@ class BlindDiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
     {
         if (_trajectory) _trajectory->setTimeFromStart(time_from_start.toSec());
     }
+
+    
 
     void setInterpolationMethod(TimeSeries::Interpolation interpolation) { _interpolation = interpolation; }
 
