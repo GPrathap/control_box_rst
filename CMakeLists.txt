@@ -7,7 +7,16 @@ set(MESSAGE_SUPPORT OFF CACHE BOOL "Message support (downloads and compiles Prot
 set(RPC_SUPPORT OFF CACHE BOOL "Network communication (downloads and comiles gRPC, requires MESSAGE_SUPPORT" FORCE)
 set(YAML_SUPPORT OFF CACHE BOOL "Yaml support" FORCE)
 set(BUILD_GUI OFF CACHE BOOL "Build gui (requires QT)" FORCE)
-set(BUILD_TESTS OFF CACHE BOOL "Build unit tests" FORCE)
+set(BUILD_TESTS ON CACHE BOOL "Build unit tests" FORCE)
+
+# if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#     add_compile_options(-Wno-error=maybe-uninitialized)
+# endif()
+
+# if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#     target_compile_options(control_box_rst PRIVATE -Wno-error=maybe-uninitialized)
+# endif()
+set(CMAKE_CXX_FLAGS_INIT "-Werror -Wall -Wextra -Wpedantic -Wno-error=maybe-uninitialized")
 
 # Set to Release in order to speed up the program significantly
 set(CMAKE_BUILD_TYPE Release) #None, Debug, Release, RelWithDebInfo, MinSizeRel

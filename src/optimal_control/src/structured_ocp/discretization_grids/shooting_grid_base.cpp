@@ -606,6 +606,7 @@ void ShootingGridBase::getStateAndControlTimeSeries(TimeSeries::Ptr x_sequence, 
     assert(isValid());
 
     PRINT_ERROR_COND_NAMED(t_max < 0, "t_max >= 0 required");
+    std::cout<< "ShootingGridBase::=============getStateAndControlTimeSeries" << std::endl;
 
     double dt = getDt();
 

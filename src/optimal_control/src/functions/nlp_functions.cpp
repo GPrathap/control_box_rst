@@ -32,14 +32,22 @@ bool NlpFunctions::update(int n, double t, ReferenceTrajectoryInterface& xref, R
                           bool single_dt, const Eigen::VectorXd& x0, const std::vector<double>& dts, const DiscretizationGridInterface* grid)
 {
     bool dimension_modified = false;
-
+    // std::cout<< "==============NlpFunctions::update===============" << std::endl;
     if (stage_preprocessor) dimension_modified |= stage_preprocessor->update(n, t, xref, uref, sref, single_dt, x0, dts, grid);
+    // std::cout<< "==============NlpFunctions::1===============" << std::endl;
     if (stage_cost) dimension_modified |= stage_cost->update(n, t, xref, uref, sref, single_dt, x0, stage_preprocessor, dts, grid);
+    // std::cout<< "==============NlpFunctions::2===============" << std::endl;
     if (final_stage_cost) dimension_modified |= final_stage_cost->update(n, t, xref, uref, sref, single_dt, x0, stage_preprocessor, dts, grid);
+    // std::cout<< "==============NlpFunctions::3===============" << std::endl;
     if (stage_equalities) dimension_modified |= stage_equalities->update(n, t, xref, uref, sref, single_dt, x0, stage_preprocessor, dts, grid);
+    // std::cout<< "==============NlpFunctions::4===============" << std::endl;
     if (stage_inequalities) dimension_modified |= stage_inequalities->update(n, t, xref, uref, sref, single_dt, x0, stage_preprocessor, dts, grid);
-    if (final_stage_constraints)
+    // std::cout<< "==============NlpFunctions::5===============" << std::endl;
+    if (final_stage_constraints){
+        // std::cout<< "==============NlpFunctions::6===============" << std::endl;
         dimension_modified |= final_stage_constraints->update(n, t, xref, uref, sref, single_dt, x0, final_stage_cost, stage_preprocessor, dts, grid);
+        // std::cout<< "==============NlpFunctions::7===============" << std::endl;
+    }
 
     return dimension_modified;
 }

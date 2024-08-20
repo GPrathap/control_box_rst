@@ -70,7 +70,7 @@ bool PredictiveController::step(const ControllerInterface::StateVector& x, Refer
     success = success && _ocp->getFirstControlInput(u);
 
     if (_auto_update_prev_control) _ocp->setPreviousControlInput(u, dt.toSec());  // cache control input for next step call
-
+    std::cout<< "======_ocp->getTimeSeries===========" << std::endl;
     _ocp->getTimeSeries(x_sequence, u_sequence);
     _x_ts = x_sequence;
     _u_ts = u_sequence;

@@ -76,8 +76,10 @@ class ReferenceTrajectoryInterface
 
     virtual void precompute(double dt, int n, Time t)              = 0;
     virtual void precompute(const std::vector<double>& dt, Time t) = 0;
+    virtual void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t) = 0;
 
     virtual void getReference(const Time& t, OutputVector& ref) const = 0;
+    virtual void getReference(Eigen::Vector3d current_pose, double dt, OutputVector& ref, double& closest_time) const = 0;
 
     virtual const OutputVector& getReferenceCached(int k) const = 0;
 
@@ -125,8 +127,13 @@ class StaticReference : public ReferenceTrajectoryInterface
 
     void precompute(double /*dt*/, int /*n*/, Time /*t*/) override {}
     void precompute(const std::vector<double>& /*dt*/, Time /*t*/) override {}
+    void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t){}
 
     void getReference(const Time& /*t*/, OutputVector& ref) const override { ref = _ref; }
+    void getReference(Eigen::Vector3d current_pose, double dt, OutputVector& ref, double& closest_time) const {
+        ref = ref;
+    }
+    
 
     const OutputVector& getReferenceCached(int /*k*/) const override { return _ref; }
 
@@ -244,6 +251,10 @@ class SineReferenceTrajectory : public ReferenceTrajectoryInterface
         _cached_t     = t;
     }
 
+    void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t){
+
+    }
+
     void precompute(const std::vector<double>& dt, Time t) override
     {
         _cached_trajectory.resize(dt.size() + 1);
@@ -264,6 +275,10 @@ class SineReferenceTrajectory : public ReferenceTrajectoryInterface
     {
         ref.resize(1);
         ref(0) = _amplitude * std::sin(_omega * t.toSec() + _offset);
+    }
+
+    void getReference(Eigen::Vector3d current_pose, double dt, OutputVector& ref, double& closest_time) const {
+        ref = ref;
     }
 
     const OutputVector& getReferenceCached(int k) const override
@@ -386,6 +401,52 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
         }
         _cached_dt = dt;
         _cached_t  = t;
+    }
+
+    void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t) {
+        _cached_trajectory.resize(n);
+
+        Duration d;
+        OutputVector ref_esti;
+        double closest_time;
+        getReference(current_pose, dt, ref_esti, closest_time);
+        std::cout<< "==================getReference===================closest_time " << closest_time << std::endl;
+        d.fromSec(closest_time);
+
+        for (int i = 0; i < n; ++i)
+        {
+            d.fromSec(dt * double(i));
+            getReference(t + d, _cached_trajectory[i]);
+        }
+        _cached_dt.resize(1);
+        _cached_dt[0] = dt;
+        _cached_t     = t;
+    }
+
+    void getReference(Eigen::Vector3d current_pose, double dt, OutputVector& ref, double& closest_time) const {
+        if (!_trajectory || _trajectory->getTimeDimension() == 0) {
+            PRINT_ERROR("DiscreteTimeReferenceTrajectory: Trajectory is empty.");
+            return;
+        }
+
+        double min_distance = std::numeric_limits<double>::max();
+        int closest_index = 0;
+
+        // Iterate over all trajectory points to find the closest one
+        for (int i = 0; i < _trajectory->getTimeDimension(); ++i) {
+            auto ref_pose_in =_trajectory->getValuesMap(i);  // Assuming getPose(i) returns the pose at time i
+            Eigen::VectorXd ref_pose = Eigen::VectorXd(ref_pose_in);
+            double distance = (current_pose - ref_pose).norm();  // Euclidean distance between positions
+            if (distance < min_distance) {
+                min_distance = distance;
+                closest_index = i;
+            }
+        }
+        double time = (double)closest_index*dt;
+
+        // Retrieve the closest time and reference values
+        closest_time = time;
+        ref = _trajectory->getValuesMap(closest_index);
     }
 
     void getReference(const Time& t, OutputVector& ref) const override
@@ -520,6 +581,10 @@ class BlindDiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
         _cached_t = t;
     }
 
+     void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t){
+
+    }
+
     void precompute(const std::vector<double>& dt, Time t) override
     {
         getReference(t, _output_cache);
@@ -544,6 +609,10 @@ class BlindDiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
             ref = _trajectory->getValuesMap(_trajectory->getTimeDimension() - 1);
         else
             _trajectory->getValuesInterpolate(time, ref, _interpolation, TimeSeries::Extrapolation::ZeroOrderHold);
+    }
+
+    void getReference(Eigen::Vector3d current_pose, double dt, OutputVector& ref, double& closest_time) const {
+        ref = ref;
     }
 
     const OutputVector& getReferenceCached(int k) const override { return _output_cache; }

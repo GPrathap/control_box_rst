@@ -12,7 +12,7 @@ include(ExternalProject)
 
 # We need thread support
 find_package(Threads REQUIRED)
-
+set(CMAKE_CXX_FLAGS_INIT "-Wno-error=maybe-uninitialized")
 # Find git since we clone gtest from https://github.com/google/googletest
 find_package(Git REQUIRED)
 
@@ -31,19 +31,19 @@ ExternalProject_Add(
     googletest
     #URL https://github.com/google/googletest/archive/master.zip
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG "release-1.8.1"
+    GIT_TAG "release-1.11.0"
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gtest
     # Disable download progress bar (better readability in logs)
     DOWNLOAD_NO_PROGRESS 1
 	# Apply patches
-	PATCH_COMMAND git checkout -- . && git apply "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-removes-cmake-debug-postfix.patch"
+	# PATCH_COMMAND git checkout -- . && git apply "${CMAKE_CURRENT_SOURCE_DIR}/patches/0001-removes-cmake-debug-postfix.patch"
     # Disable install step
     INSTALL_COMMAND ""
     # Disable update
     UPDATE_COMMAND ""
     # We don't need to run update command. Takes time and the version we initially d/l will should be fine
     CMAKE_CACHE_ARGS ${GTEST_CMAKE_CUSTOM_ARGS}
-    BUILD_BYPRODUCTS "<BINARY_DIR>/googlemock/gtest/${GTESTLIBNAME};<BINARY_DIR>/googlemock/${GMOCKLIBNAME}"
+    BUILD_BYPRODUCTS "<BINARY_DIR>/googlemock/gtest/${GTESTLIBNAME};<BINARY_DIR>/googlemock/${GMOCKLIBNAME};<BINARY_DIR>/lib/libgtest.a"
 )
 # Get source and binary directories
 ExternalProject_Get_Property(googletest source_dir binary_dir)
@@ -51,7 +51,7 @@ ExternalProject_Get_Property(googletest source_dir binary_dir)
 # Get GTest source and binary directories from CMake project
 add_library(gtest INTERFACE IMPORTED GLOBAL)
 set_property(TARGET gtest PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${source_dir}/googletest/include)
-set_property(TARGET gtest PROPERTY INTERFACE_LINK_LIBRARIES ${binary_dir}/googlemock/gtest/${GTESTLIBNAME} ${CMAKE_THREAD_LIBS_INIT})
+set_property(TARGET gtest PROPERTY INTERFACE_LINK_LIBRARIES ${binary_dir}/lib/libgtest.a ${CMAKE_THREAD_LIBS_INIT})
 add_dependencies(gtest googletest)
 
 # Get GMock source and binary directories from CMake project
