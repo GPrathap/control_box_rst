@@ -405,14 +405,12 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
 
     void precompute(Eigen::Vector3d current_pose, const double dt, int n, Time t) {
         _cached_trajectory.resize(n);
-
         Duration d;
         OutputVector ref_esti;
         double closest_time;
         getReference(current_pose, dt, ref_esti, closest_time);
-        std::cout<< "==================getReference===================closest_time " << closest_time << std::endl;
+        std::cout<< "cu: " << current_pose.transpose() << " , " << closest_time << ", ex: " << ref_esti.transpose() << std::endl;
         d.fromSec(closest_time);
-
         for (int i = 0; i < n; ++i)
         {
             d.fromSec(dt * double(i));
@@ -429,7 +427,7 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
             return;
         }
 
-        double min_distance = std::numeric_limits<double>::max();
+        double min_from_init = std::numeric_limits<double>::max();
         int closest_index = 0;
 
         // Iterate over all trajectory points to find the closest one
@@ -437,12 +435,16 @@ class DiscreteTimeReferenceTrajectory : public ReferenceTrajectoryInterface
             auto ref_pose_in =_trajectory->getValuesMap(i);  // Assuming getPose(i) returns the pose at time i
             Eigen::VectorXd ref_pose = Eigen::VectorXd(ref_pose_in);
             double distance = (current_pose - ref_pose).norm();  // Euclidean distance between positions
-            if (distance < min_distance) {
-                min_distance = distance;
+            if (distance < min_from_init) {
+                min_from_init = distance;
                 closest_index = i;
             }
         }
-        double time = (double)closest_index*dt;
+
+        if(closest_index == 0){
+            closest_index = 15.0;
+        }
+        double time = (double)closest_index*dt*15.0;
 
         // Retrieve the closest time and reference values
         closest_time = time;

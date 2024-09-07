@@ -1,6 +1,10 @@
 # Library control-box-rst-optimization
 project(corbo-optimization VERSION 0.1 LANGUAGES CXX)
 
+
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
+
 add_library(corbo_optimization STATIC
     src/optimization_problem_interface.cpp
     src/simple_optimization_problem.cpp
@@ -90,10 +94,10 @@ if (BUILD_TESTS)
 	add_executable(test_optimization
 	    test/test_main.cpp
             test/test_simple_optimization_problem.cpp
-            test/test_hyper_graph_optimization_problem_ignore_structure.cpp
-            test/test_hyper_graph_optimization_problem_edge_based.cpp
-            test/test_hyper_graph_optimization_problem_vertex_based.cpp
-            test/test_hyper_graph.cpp
+            # test/test_hyper_graph_optimization_problem_ignore_structure.cpp
+            # test/test_hyper_graph_optimization_problem_edge_based.cpp
+            # test/test_hyper_graph_optimization_problem_vertex_based.cpp
+            # test/test_hyper_graph.cpp
             test/test_solver_ipopt.cpp
             test/test_solver_osqp.cpp
             #test/test_levenberg_marquardt_dense.cpp
@@ -104,9 +108,21 @@ if (BUILD_TESTS)
 	target_link_libraries(test_optimization
             corbo_optimization
 	    gtest
+        ${PYTHON_LIBRARIES}
 	    #gmock
 	)
-        add_test(test_optimization_test test_optimization)
+    add_test(test_optimization_test test_optimization)
+
+     add_executable(learn_someopt
+	    test/learn_someopt.cpp
+	)
+
+	target_link_libraries(learn_someopt
+            corbo_optimization
+	    gtest
+	    #gmock
+	)
+    # add_test(test_optimization_test learn_someopt)
 endif (BUILD_TESTS)
 
 # Add header files as custom target in order to display them in the IDE

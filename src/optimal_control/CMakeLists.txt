@@ -76,7 +76,7 @@ if (BUILD_TESTS)
 	add_executable(test_optimal_control
 	    test/test_main.cpp
             #test/test_full_discretization_grid.cpp
-            #test/test_multiple_shooting_grid.cpp
+            test/test_multiple_shooting_grid.cpp
             #test/test_single_shooting_grid.cpp
 	)
 

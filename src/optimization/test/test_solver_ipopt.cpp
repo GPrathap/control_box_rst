@@ -26,7 +26,7 @@
 
 #include "gtest/gtest.h"
 
-#ifdef IPOPT
+// #ifdef IPOPT
 
 #include <corbo-optimization/simple_optimization_problem.h>
 #include <corbo-optimization/solver/nlp_solver_ipopt.h>
@@ -385,17 +385,17 @@ TEST_F(TestSolverIpopt, solve_betts_fun_constr_weight_adapt)
     EXPECT_NEAR(optim.getX()[1], 0.0, 1e-2);
 }
 
-#else  // IPOPT
+// #else  // IPOPT
 
-class TestSolverIpopt : public testing::Test
-{
- protected:
-    // You can do set-up work for each test here.
-    TestSolverIpopt() {}
-    // You can do clean-up work that doesn't throw exceptions here.
-    virtual ~TestSolverIpopt() {}
-};
+// class TestSolverIpopt : public testing::Test
+// {
+//  protected:
+//     // You can do set-up work for each test here.
+//     TestSolverIpopt() {}
+//     // You can do clean-up work that doesn't throw exceptions here.
+//     virtual ~TestSolverIpopt() {}
+// };
 
-TEST_F(TestSolverIpopt, ipopt_not_found) { PRINT_WARNING("Skipping IPOPT tests, since IPOPT is not found."); }
+// TEST_F(TestSolverIpopt, ipopt_not_found) { PRINT_WARNING("Skipping IPOPT tests, since IPOPT is not found."); }
 
-#endif  // IPOPT
+// #endif  // IPOPT

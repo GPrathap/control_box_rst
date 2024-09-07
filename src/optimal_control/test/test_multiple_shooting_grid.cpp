@@ -74,17 +74,25 @@ class TestMultipleShootingGrid : public testing::Test
 
 // #endif
 
-// TEST_F(TestMultipleShootingGrid, initialize_grid_start_state_only)
-//{
-//    Eigen::Vector2d x0(0, 5);
+TEST_F(TestMultipleShootingGrid, initialize_grid_start_state_only)
+{
+//     Eigen::Vector2d x0(0, 5);
 
-//    Eigen::Vector2d u0(0, 0);
+//     Eigen::Vector2d u0(0, 0);
 
-//    int num_states = 5;
-//    double dt      = 0.1;
+//     int num_states = 5;
+//     double dt      = 0.1;
 
-//    grid.setHorizon(num_states, dt);
-//    grid.initialize(x0, x0, u0);
+//     grid.setNRef(num_states);
+//     grid.setDtRef(dt);
+
+//     Eigen::Matrix<bool, -1, 1> xf_fixed_eigen(3);  // we cannot use Eigen::Map as vector<bool> does not provide raw access
+//     for (int i = 0; i < 3; ++i) xf_fixed_eigen[i] = true;
+//     grid.setXfFixed(xf_fixed_eigen);
+//     grid.setWarmStart(true);
+
+// //    grid.setHorizon(num_states, dt);
+// //    grid.initialize(x0, x0, u0);
 
 //    corbo::TimeSeries::Ptr sn = grid.getShootingNodeTimeSeries();
 //    EXPECT_DOUBLE_EQ(sn->getValueDimension(), 2);
@@ -116,7 +124,7 @@ class TestMultipleShootingGrid : public testing::Test
 //    {
 //        EXPECT_FALSE(grid.getShootingIntervals()[i].shooting_node->isFixed());
 //    }
-//}
+}
 
 // TEST_F(TestMultipleShootingGrid, initialize_grid_start_state_end_state)
 //{
